@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/McpAuth.Client/McpAuth.Client.csproj" />
+    <Project Path="src/McpAuth.Server/McpAuth.Server.csproj" />
+  </Folder>
+</Solution>

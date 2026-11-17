@@ -1,0 +1,11 @@
+<Project>
+  <!-- Central package management: versions here, PackageReference without Version in the projects. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The official MCP C# SDK: the server (Streamable HTTP) and the client. -->
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="2.3.1" />
+  </ItemGroup>
+</Project>
