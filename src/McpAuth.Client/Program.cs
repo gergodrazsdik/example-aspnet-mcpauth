@@ -1,18 +1,44 @@
-﻿using ModelContextProtocol.Client;
+﻿using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using System.Web;
+using ModelContextProtocol.Authentication;
+using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-// A console MCP client: connects to the server, lists its tools and calls list_notes.
-var endpoint = new Uri(args.FirstOrDefault() ?? "http://localhost:5100/mcp");
+// A console MCP client that signs in through the browser: the SDK finds Keycloak from the
+// server's 401, sends the user to its login page (authorization code with PKCE), and this
+// program receives the code on a loopback address (http://127.0.0.1:<free port>/callback).
+//
+//   dotnet run --project src/McpAuth.Client [-- [--no-browser] [endpoint]]
+var noBrowser = args.Contains("--no-browser");
+var endpoint = new Uri(args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal)) ?? "http://localhost:5100/mcp");
+
+// Keycloak accepts any port on the loopback address for the registered
+// http://127.0.0.1/callback (RFC 8252), so take a free one.
+var redirectUri = new Uri($"http://127.0.0.1:{FreePort()}/callback");
 
 var transport = new HttpClientTransport(new HttpClientTransportOptions
 {
     Endpoint = endpoint,
     TransportMode = HttpTransportMode.StreamableHttp,
+    OAuth = new ClientOAuthOptions
+    {
+        // Registered in Keycloak's realm (keycloak/realm-demo.json): a public client, no secret.
+        ClientId = "mcpauth-console",
+        RedirectUri = redirectUri,
+        AuthorizationCallbackHandler = (context, cancellationToken) =>
+            SignInInBrowserAsync(context.AuthorizationUri, context.RedirectUri, noBrowser, cancellationToken),
+    },
 });
 
 await using var client = await McpClient.CreateAsync(transport, new McpClientOptions
 {
     ClientInfo = new Implementation { Name = "mcpauth-console", Version = "1.0.0" },
+
+    // Connecting includes signing in, so give the user as long as the sign-in waits (the
+    // default is 60 seconds).
+    InitializationTimeout = TimeSpan.FromMinutes(5),
 });
 
 Console.WriteLine($"Connected to {client.ServerInfo?.Name ?? "the server"} at {endpoint}");
@@ -28,4 +54,71 @@ var result = await client.CallToolAsync("list_notes");
 foreach (var block in result.Content.OfType<TextContentBlock>())
 {
     Console.WriteLine(block.Text);
+}
+
+// Opens Keycloak's login page and waits for the browser to come back to the loopback address
+// with the authorization code. The SDK made the URL (with PKCE, state and resource) and
+// exchanges the code for tokens afterwards.
+static async Task<AuthorizationResult?> SignInInBrowserAsync(Uri authorizationUri, Uri redirectUri, bool noBrowser, CancellationToken cancellationToken)
+{
+    using var listener = new HttpListener();
+    listener.Prefixes.Add(redirectUri.GetLeftPart(UriPartial.Authority) + "/");
+    listener.Start();
+
+    Console.WriteLine($"Sign in to continue. Open this address if no browser opens:\n{authorizationUri}\n");
+    if (!noBrowser)
+    {
+        OpenBrowser(authorizationUri);
+    }
+
+    // Wait for the redirect to the callback path; ignore anything else (such as /favicon.ico).
+    HttpListenerContext context;
+    do
+    {
+        context = await listener.GetContextAsync().WaitAsync(TimeSpan.FromMinutes(5), cancellationToken);
+        if (context.Request.Url?.AbsolutePath != redirectUri.AbsolutePath)
+        {
+            context.Response.StatusCode = 404;
+            context.Response.Close();
+        }
+    }
+    while (context.Request.Url?.AbsolutePath != redirectUri.AbsolutePath);
+
+    var query = HttpUtility.ParseQueryString(context.Request.Url!.Query);
+    var error = query["error"];
+    var page = error is null
+        ? "Signed in. You can close this tab and go back to the terminal."
+        : $"Sign-in failed: {error}. Go back to the terminal.";
+    var body = System.Text.Encoding.UTF8.GetBytes($"<!doctype html><title>MCP Auth console</title><p>{WebUtility.HtmlEncode(page)}</p>");
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.OutputStream.WriteAsync(body, cancellationToken);
+    context.Response.Close();
+
+    if (error is not null)
+    {
+        Console.Error.WriteLine($"Sign-in failed: {error} {query["error_description"]}");
+        return null;
+    }
+
+    Console.WriteLine("Signed in.");
+    return new AuthorizationResult { Code = query["code"], State = query["state"], Iss = query["iss"] };
+}
+
+static void OpenBrowser(Uri uri)
+{
+    try
+    {
+        Process.Start(new ProcessStartInfo(uri.ToString()) { UseShellExecute = true });
+    }
+    catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+    {
+        // No browser to start (a server, a container): the address printed above still works.
+    }
+}
+
+static int FreePort()
+{
+    using var socket = new TcpListener(IPAddress.Loopback, 0);
+    socket.Start();
+    return ((IPEndPoint)socket.LocalEndpoint).Port;
 }

@@ -23,7 +23,7 @@
       "emailVerified": true,
       "enabled": true,
       "credentials": [{ "type": "password", "value": "alice", "temporary": false }],
-      "realmRoles": ["notes-reader", "notes-writer"]
+      "realmRoles": ["notes-reader", "notes-writer", "offline_access"]
     },
     {
       "username": "bob",
@@ -33,7 +33,7 @@
       "emailVerified": true,
       "enabled": true,
       "credentials": [{ "type": "password", "value": "bob", "temporary": false }],
-      "realmRoles": ["notes-reader"]
+      "realmRoles": ["notes-reader", "offline_access"]
     }
   ],
   "clientScopes": [
@@ -103,6 +103,16 @@
       ]
     },
     {
+      "name": "offline_access",
+      "description": "A refresh token that outlives the browser sign-in (an offline token). MCP clients ask for it.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Stay signed in (offline access)"
+      }
+    },
+    {
       "name": "notes:read",
       "description": "Read the notes on the MCP server.",
       "protocol": "openid-connect",
@@ -151,10 +161,11 @@
   ],
   "scopeMappings": [
     { "clientScope": "notes:read", "roles": ["notes-reader"] },
-    { "clientScope": "notes:write", "roles": ["notes-writer"] }
+    { "clientScope": "notes:write", "roles": ["notes-writer"] },
+    { "clientScope": "offline_access", "roles": ["offline_access"] }
   ],
   "defaultDefaultClientScopes": ["basic", "profile", "roles"],
-  "defaultOptionalClientScopes": ["notes:read", "notes:write"],
+  "defaultOptionalClientScopes": ["notes:read", "notes:write", "offline_access"],
   "clients": [
     {
       "clientId": "mcpauth-console",
@@ -172,7 +183,7 @@
       "redirectUris": ["http://127.0.0.1/callback"],
       "attributes": { "pkce.code.challenge.method": "S256" },
       "defaultClientScopes": ["basic", "profile", "roles"],
-      "optionalClientScopes": ["notes:read", "notes:write"]
+      "optionalClientScopes": ["notes:read", "notes:write", "offline_access"]
     }
   ]
 }
