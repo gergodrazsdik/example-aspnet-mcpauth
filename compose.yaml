@@ -20,6 +20,9 @@ services:
       # The address in the tokens' issuer. The browser and the MCP server
       # on the host both reach Keycloak here, so both see the same issuer.
       KC_HOSTNAME: http://localhost:8180
+      # Log successful events too (registrations, logins, code exchanges),
+      # not only errors: `podman compose logs -f keycloak` shows the flow.
+      KC_SPI_EVENTS_LISTENER__JBOSS_LOGGING__SUCCESS_LEVEL: info
     ports:
       - "127.0.0.1:8180:8080"
     volumes:

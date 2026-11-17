@@ -166,6 +166,29 @@
   ],
   "defaultDefaultClientScopes": ["basic", "profile", "roles"],
   "defaultOptionalClientScopes": ["notes:read", "notes:write", "offline_access"],
+  "components": {
+    "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
+      {
+        "name": "Trusted Hosts",
+        "providerId": "trusted-hosts",
+        "subType": "anonymous",
+        "config": {
+          "host-sending-registration-request-must-match": ["false"],
+          "client-uris-must-match": ["true"],
+          "trusted-hosts": ["localhost", "127.0.0.1"]
+        }
+      },
+      { "name": "Consent Required", "providerId": "consent-required", "subType": "anonymous", "config": {} },
+      { "name": "Full Scope Disabled", "providerId": "scope", "subType": "anonymous", "config": {} },
+      { "name": "Max Clients Limit", "providerId": "max-clients", "subType": "anonymous", "config": { "max-clients": ["200"] } },
+      { "name": "Allowed Client Scopes", "providerId": "allowed-client-templates", "subType": "anonymous", "config": { "allow-default-scopes": ["true"] } },
+      { "name": "Allowed Protocol Mapper Types", "providerId": "allowed-protocol-mappers", "subType": "anonymous", "config": { "allowed-protocol-mapper-types": ["oidc-full-name-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-usermodel-attribute-mapper", "oidc-usermodel-property-mapper", "oidc-address-mapper", "saml-user-attribute-mapper", "saml-user-property-mapper", "saml-role-list-mapper"] } },
+      { "name": "Allowed Registration Web Origins", "providerId": "registration-web-origins", "subType": "anonymous", "config": {} },
+      { "name": "Allowed Client Scopes", "providerId": "allowed-client-templates", "subType": "authenticated", "config": { "allow-default-scopes": ["true"] } },
+      { "name": "Allowed Protocol Mapper Types", "providerId": "allowed-protocol-mappers", "subType": "authenticated", "config": { "allowed-protocol-mapper-types": ["oidc-full-name-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-usermodel-attribute-mapper", "oidc-usermodel-property-mapper", "oidc-address-mapper", "saml-user-attribute-mapper", "saml-user-property-mapper", "saml-role-list-mapper"] } },
+      { "name": "Allowed Registration Web Origins", "providerId": "registration-web-origins", "subType": "authenticated", "config": {} }
+    ]
+  },
   "clients": [
     {
       "clientId": "mcpauth-console",
@@ -181,6 +204,24 @@
       "consentRequired": true,
       "fullScopeAllowed": false,
       "redirectUris": ["http://127.0.0.1/callback"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "defaultClientScopes": ["basic", "profile", "roles"],
+      "optionalClientScopes": ["notes:read", "notes:write", "offline_access"]
+    },
+    {
+      "clientId": "mcpauth-vscode",
+      "name": "Visual Studio Code",
+      "description": "For VS Code, which registers with redirect URIs on vscode.dev that the registration policy refuses; enter this client ID when VS Code asks for one.",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "consentRequired": true,
+      "fullScopeAllowed": false,
+      "redirectUris": ["http://127.0.0.1/", "https://vscode.dev/redirect"],
       "attributes": { "pkce.code.challenge.method": "S256" },
       "defaultClientScopes": ["basic", "profile", "roles"],
       "optionalClientScopes": ["notes:read", "notes:write", "offline_access"]
