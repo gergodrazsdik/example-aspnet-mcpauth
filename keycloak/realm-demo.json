@@ -1,0 +1,178 @@
+{
+  "realm": "demo",
+  "displayName": "MCP Auth demo",
+  "enabled": true,
+  "attributes": {
+    "note": "Dev-only demo realm: the users' passwords are public demo values. Never import it into a real Keycloak."
+  },
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      { "name": "notes-reader", "description": "May read notes." },
+      { "name": "notes-writer", "description": "May add notes." }
+    ]
+  },
+  "users": [
+    {
+      "username": "alice",
+      "firstName": "Alice",
+      "lastName": "Writer",
+      "email": "alice@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "alice", "temporary": false }],
+      "realmRoles": ["notes-reader", "notes-writer"]
+    },
+    {
+      "username": "bob",
+      "firstName": "Bob",
+      "lastName": "Reader",
+      "email": "bob@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "bob", "temporary": false }],
+      "realmRoles": ["notes-reader"]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "basic",
+      "description": "The user's ID (sub) in every token.",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "config": { "access.token.claim": "true", "introspection.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "profile",
+      "description": "The user's username and name.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Your username and name"
+      },
+      "protocolMappers": [
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "config": { "access.token.claim": "true", "id.token.claim": "true", "introspection.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "description": "The user's realm roles, as a flat roles claim.",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "notes:read",
+      "description": "Read the notes on the MCP server.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Read your notes"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "http://localhost:5100/mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "notes:write",
+      "description": "Add notes on the MCP server.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Add notes for you"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "http://localhost:5100/mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "scopeMappings": [
+    { "clientScope": "notes:read", "roles": ["notes-reader"] },
+    { "clientScope": "notes:write", "roles": ["notes-writer"] }
+  ],
+  "defaultDefaultClientScopes": ["basic", "profile", "roles"],
+  "defaultOptionalClientScopes": ["notes:read", "notes:write"],
+  "clients": [
+    {
+      "clientId": "mcpauth-console",
+      "name": "MCP Auth console client",
+      "description": "The example's console client: a public client that signs in through the browser with PKCE and a loopback redirect.",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "consentRequired": true,
+      "fullScopeAllowed": false,
+      "redirectUris": ["http://127.0.0.1/callback"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "defaultClientScopes": ["basic", "profile", "roles"],
+      "optionalClientScopes": ["notes:read", "notes:write"]
+    }
+  ]
+}

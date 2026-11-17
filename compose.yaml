@@ -1,0 +1,26 @@
+---
+# Keycloak for the example, in dev mode: HTTP, an in-memory database, and
+# the demo realm imported at every start (keycloak/realm-demo.json).
+# Dev-only: never run Keycloak like this in production.
+#
+#   podman compose up -d   (or docker compose up -d)
+#   podman compose down    (forgets every change: the next start imports
+#                           the realm again)
+services:
+  keycloak:
+    # Pinned by tag and digest (the multi-arch index: amd64 and arm64).
+    # The digest can't wrap, so the line-length rule is off for that line.
+    # yamllint disable-line rule:line-length
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:3f3c5f8e03c614774b4bd9173b88391fefa4153bfc010d8012d59ad825377332
+    command: ["start-dev", "--import-realm"]
+    environment:
+      # Demo-only admin login for http://localhost:8180/admin.
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # The address in the tokens' issuer. The browser and the MCP server
+      # on the host both reach Keycloak here, so both see the same issuer.
+      KC_HOSTNAME: http://localhost:8180
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
