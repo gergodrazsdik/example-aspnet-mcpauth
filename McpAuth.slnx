@@ -3,4 +3,7 @@
     <Project Path="src/McpAuth.Client/McpAuth.Client.csproj" />
     <Project Path="src/McpAuth.Server/McpAuth.Server.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/McpAuth.Screens/McpAuth.Screens.csproj" />
+  </Folder>
 </Solution>

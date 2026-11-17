@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    End-to-end tests and screenshots: sign in through Keycloak with the console client, and capture
+    the pages the article shows. They need the running stack (podman compose up -d, then the
+    server); see README.md.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit.Playwright" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The tests run the console client's build output, so build it first; no reference to its code. -->
+    <ProjectReference Include="../../src/McpAuth.Client/McpAuth.Client.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
