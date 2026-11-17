@@ -10,9 +10,16 @@ using ModelContextProtocol.Protocol;
 // server's 401, sends the user to its login page (authorization code with PKCE), and this
 // program receives the code on a loopback address (http://127.0.0.1:<free port>/callback).
 //
-//   dotnet run --project src/McpAuth.Client [-- [--no-browser] [endpoint]]
+//   dotnet run --project src/McpAuth.Client [-- [--read-only] [--add "<text>"] [--no-browser] [endpoint]]
+//
+//   --read-only  ask Keycloak for notes:read only, not notes:write
+//   --add        add a note (needs notes:write)
+//   --no-browser print the sign-in address instead of opening a browser
 var noBrowser = args.Contains("--no-browser");
-var endpoint = new Uri(args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal)) ?? "http://localhost:5100/mcp");
+var readOnly = args.Contains("--read-only");
+var addIndex = Array.IndexOf(args, "--add");
+var noteText = addIndex >= 0 && addIndex + 1 < args.Length ? args[addIndex + 1] : null;
+var endpoint = new Uri(args.Where((a, i) => !a.StartsWith("--", StringComparison.Ordinal) && i != addIndex + 1).FirstOrDefault() ?? "http://localhost:5100/mcp");
 
 // Keycloak accepts any port on the loopback address for the registered
 // http://127.0.0.1/callback (RFC 8252), so take a free one.
@@ -29,6 +36,11 @@ var transport = new HttpClientTransport(new HttpClientTransportOptions
         RedirectUri = redirectUri,
         AuthorizationCallbackHandler = (context, cancellationToken) =>
             SignInInBrowserAsync(context.AuthorizationUri, context.RedirectUri, noBrowser, cancellationToken),
+
+        // The SDK asks for the scopes the server lists (notes:read notes:write) plus
+        // offline_access; the selector has the last word. (ClientOAuthOptions.Scopes is only a
+        // fallback for servers that list none.)
+        ScopeSelector = readOnly ? scopes => scopes?.Where(s => s != "notes:write") : null,
     },
 });
 
@@ -41,7 +53,8 @@ await using var client = await McpClient.CreateAsync(transport, new McpClientOpt
     InitializationTimeout = TimeSpan.FromMinutes(5),
 });
 
-Console.WriteLine($"Connected to {client.ServerInfo?.Name ?? "the server"} at {endpoint}");
+Console.WriteLine($"Connected to {client.ServerInfo?.Title ?? client.ServerInfo?.Name ?? "the server"} at {endpoint}");
+Console.WriteLine($"Instructions: {client.ServerInstructions}");
 
 Console.WriteLine("\nTools:");
 foreach (var tool in await client.ListToolsAsync())
@@ -49,11 +62,24 @@ foreach (var tool in await client.ListToolsAsync())
     Console.WriteLine($"  {tool.Name}: {tool.Description}");
 }
 
-Console.WriteLine("\nlist_notes:");
-var result = await client.CallToolAsync("list_notes");
-foreach (var block in result.Content.OfType<TextContentBlock>())
+await CallAsync(client, "whoami");
+if (noteText is not null)
 {
-    Console.WriteLine(block.Text);
+    await CallAsync(client, "add_note", new Dictionary<string, object?> { ["text"] = noteText });
+}
+
+await CallAsync(client, "list_notes");
+
+// Calls a tool and prints its text; a refusal comes back as a result with IsError set, its
+// message written for the model (and so readable for people too).
+static async Task CallAsync(McpClient client, string tool, Dictionary<string, object?>? arguments = null)
+{
+    Console.WriteLine($"\n{tool}:");
+    var result = await client.CallToolAsync(tool, arguments);
+    foreach (var block in result.Content.OfType<TextContentBlock>())
+    {
+        Console.WriteLine(result.IsError == true ? $"  refused: {block.Text}" : block.Text);
+    }
 }
 
 // Opens Keycloak's login page and waits for the browser to come back to the loopback address

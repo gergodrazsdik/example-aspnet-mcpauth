@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using McpAuth.Server;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using ModelContextProtocol.AspNetCore;
@@ -52,11 +53,32 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<NoteStore>();
+builder.Services.AddSingleton(TimeProvider.System);
+
+// The tools read the signed-in user from the request.
+builder.Services.AddHttpContextAccessor();
 
 // The MCP server: Streamable HTTP, stateless (no session to keep, so it scales out without
 // sticky sessions), with the note tools.
 builder.Services.AddMcpServer()
-    .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
+    .WithHttpTransport(options =>
+    {
+        options.SessionMode = HttpServerSessionMode.Stateless;
+
+        // Stateless: this runs for every request, after authentication. The instructions tell
+        // the client who it works for and what the token allows, so it needn't learn that from
+        // refusals.
+        options.ConfigureSessionOptions = (context, server, _) =>
+        {
+            var user = context.User;
+            server.ServerInfo = new() { Name = "mcpauth-notes", Title = "MCP Auth example: notes", Version = "1.0.0" };
+            server.ServerInstructions =
+                $"You work for {user.Identity?.Name} ({user.FindFirstValue("name")}), who signed in through Keycloak. "
+                + NoteScopes.Rights(user)
+                + " whoami shows the token's scopes and roles. Notes are short texts; add_note writes one in the user's name.";
+            return Task.CompletedTask;
+        };
+    })
     .WithTools<NoteTools>();
 
 var app = builder.Build();
