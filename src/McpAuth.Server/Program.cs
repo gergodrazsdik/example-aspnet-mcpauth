@@ -38,11 +38,14 @@ builder.Services.AddAuthentication(options =>
     .AddMcp(options =>
     {
         // Served at /.well-known/oauth-protected-resource/mcp (and without /mcp): it names the
-        // resource and the authorization server that issues tokens for it (RFC 9728).
+        // resource and the authorization server that issues tokens for it (RFC 9728), and the
+        // scopes a client should ask for.
         options.ResourceMetadata = new()
         {
             Resource = resource,
             AuthorizationServers = { authority },
+            ScopesSupported = [NoteScopes.Read, NoteScopes.Write],
+            ResourceName = "MCP Auth example: notes",
         };
     });
 
