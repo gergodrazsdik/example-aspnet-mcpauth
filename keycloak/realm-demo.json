@@ -8,6 +8,13 @@
   "sslRequired": "external",
   "registrationAllowed": false,
   "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 604800,
+  "offlineSessionMaxLifespanEnabled": true,
+  "offlineSessionMaxLifespan": 2592000,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
   "roles": {
     "realm": [
       { "name": "notes-reader", "description": "May read notes." },
@@ -166,6 +173,26 @@
   ],
   "defaultDefaultClientScopes": ["basic", "profile", "roles"],
   "defaultOptionalClientScopes": ["notes:read", "notes:write", "offline_access"],
+  "clientProfiles": {
+    "profiles": [
+      {
+        "name": "require-pkce",
+        "description": "Authorization code requests must carry a PKCE S256 code challenge.",
+        "executors": [{ "executor": "pkce-enforcer", "configuration": { "auto-configure": "true" } }]
+      }
+    ]
+  },
+  "clientPolicies": {
+    "policies": [
+      {
+        "name": "public-clients-use-pkce",
+        "description": "Every public client, including ones that registered themselves, must use PKCE S256.",
+        "enabled": true,
+        "conditions": [{ "condition": "client-access-type", "configuration": { "type": ["public"] } }],
+        "profiles": ["require-pkce"]
+      }
+    ]
+  },
   "components": {
     "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
       {
