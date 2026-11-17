@@ -4,6 +4,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Validates Keycloak's access tokens. On .NET 10, use 10.0.x. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
     <!-- The official MCP C# SDK: the server (Streamable HTTP) and the client. -->
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
     <PackageVersion Include="ModelContextProtocol.Core" Version="2.3.1" />
